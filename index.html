@@ -1,16 +1,94 @@
+<!-- Copyright (C) 2020 curs0r(小磁怪) -->
 <html>
 <head>
 <meta charset="UTF-8"/>
-<!-- <script type="text/css" src="https://cdn.bootcss.com/twitter-bootstrap/4.4.1/css/bootstrap.min.css"></script> -->
+<link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.bootcss.com/toastr.js/2.1.4/toastr.css" rel="stylesheet">
 <script type="text/javascript" src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.bootcss.com/toastr.js/2.1.4/toastr.min.js"></script>
 </head>
 <body>
-	<table id="maze" ondragstart="return false;" style="width:741px; height:741px; table-layout:fixed; font-size:14px" border="0" cellspacing="0" cellpadding="1">
-	</table>
-	<p id="t_dist"></p>
+	<div>
+		<table id="maze" ondragstart="return false;" style="width:741px; height:741px; table-layout:fixed; font-size:12px; float: left;" border="0" cellspacing="0" cellpadding="1">
+		</table>
+		<div style="margin-left: 20px; float: left;">
+			<h4>GemTD Map Editor</h4>
+			<p id="p_info"></p>
+
+			<button class="btn btn-danger" id="btnclear">Clear Maze</button>
+			<br/>
+			<br/>
+			<button class="btn btn-success" id="btnsave1">Save Maze 1</button>
+			<button class="btn btn-warning" id="btnload1">Load Maze 1</button>
+			<br/>
+			<br/>
+			<button class="btn btn-success" id="btnsave2">Save Maze 2</button>
+			<button class="btn btn-warning" id="btnload2">Load Maze 1</button>
+			<br/>
+			<br/>
+			<button class="btn btn-success" id="btnsave3">Save Maze 3</button>
+			<button class="btn btn-warning" id="btnload3">Load Maze 1</button>
+			<br/>
+			<br/>
+			<button class="btn btn-success" id="btnsave4">Save Maze 4</button>
+			<button class="btn btn-warning" id="btnload4">Load Maze 1</button>
+			<br/>
+			<br/>
+			<button class="btn btn-success" id="btnsave5">Save Maze 5</button>
+			<button class="btn btn-warning" id="btnload5">Load Maze 1</button>
+			<br/>
+			<br/>
+			<p>usage: You can use mouse buttons to drag a line. Maze is just saved in web cache, so please record the share link at the bottom. </p>
+			<p>(by. curs0r)</p>
+		</div>
+	</div>
+	<div style="clear:both">
+		<div>Share or save your maze with the link:</div>
+		<a id="t_code"></a>
+	</div>
 </div>
 </body>
 <script type="text/javascript">
+var b64t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890+-";
+function BinToB64(arr){
+	var a = 0, c = 0, res="";
+	for (var i = 0; i < arr.length; i++){
+		a = a * 2 + arr[i];
+		c++;
+		if (c == 6){
+			res += b64t[a];
+			c=a=0;
+		}
+	}
+	if (c > 0)
+	{
+		res += b64t[a];
+	}
+	return res;
+}
+function B64ToBin(b){
+	if (typeof(b) != "string") return null;
+	var res = [];
+	for (var a of b){
+		var x = b64t.indexOf(a);
+		for (var i = 5; i >= 0; i--){
+			res.push(x>>i&1);
+		}
+	}
+	return res;
+}
+function MazeToB64(m){
+	var flat_maze = [];
+	for (var i of maze_info) {
+		for (var j of i) {
+			flat_maze.push(j);
+		}
+	}
+	var b64 = BinToB64(flat_maze);
+	b64 = b64.replace(/(A*$)/g,"")
+	if(b64 == "") b64 = "A";
+	return b64;
+}
 
 path_points = [[2,4],[18,4],[18,32],[4,32],[4,18],[32,18],[32,34]]
 maze_info = new Array(37);
@@ -18,21 +96,26 @@ start_cell = null;
 last_cell = null;
 
 function refresh_cell(x, y) {
-	var is_point = false;
-	for (var p of path_points) {
-		if (p[0] == x && p[1] == y) {
-			is_point = true;
+	var point_idx = -1;
+	for (var i = 0; i < path_points.length; i++) {
+		if (path_points[i][0] == x && path_points[i][1] == y) {
+			point_idx = i;
 			break;
 		}
 	}
-	if (is_point) {
+	if (point_idx >= 0) {
+		$("#c"+x+"_"+y).html('<div style="position:absolute;left:' + (y*20 + 6) + 'px;top:' + (x*20 + 3) + 'px;background-color:transparent;overflow:hidden;height:20px;width:20px;">' + point_idx + '</div>');
 		$("#c"+x+"_"+y).css('background-color', 'red');
 		maze_info[x][y] = 0;
 	} else if (Math.max(x,y) < 9 || Math.min(x,y) > 27) {
 		$("#c"+x+"_"+y).css('background-color', '#FBE946');
 		maze_info[x][y] = 0;
 	} else if (maze_info[x][y] == 0) {
-		$("#c"+x+"_"+y).css('background-color', 'white');
+		if (x == 18 || y == 18) {
+			$("#c"+x+"_"+y).css('background-color', '#DDDDDD');
+		} else {
+			$("#c"+x+"_"+y).css('background-color', 'white');
+		}
 	} else {
 		$("#c"+x+"_"+y).css('background-color', 'black');
 	}
@@ -89,7 +172,6 @@ function spfa(sp, ep, maze) {
 			}
 		}
 	}
-	console.log(dis);
 	return dis[ep[0]][ep[1]];
 }
 function on_maze_changed() {
@@ -98,15 +180,30 @@ function on_maze_changed() {
 	for (var i = 0; i < path_points.length - 1; i++) {
 		dis = spfa(path_points[i], path_points[i+1], maze_info);
 		sum_dis += dis;
-		str = str + "[" + (i+1) + " -> " + (i+2) + "] " + (Math.round(dis * 100)/100) + "\n";
+		str = str + "[" + (i) + " -> " + (i+1) + "]: " + (Math.round(dis * 100)/100) + "\n";
 	}
 	if (sum_dis < 9999) {
-		str = str + "总长:" + (Math.round(sum_dis * 100)/100);
+		str = str + "\nSum length:" + (Math.round(sum_dis * 100)/100);
 	} else {
-		str = str + "迷宫不通";
+		str = str + "\nMaze is blocked";
 	}
-	obj = $("#t_dist").text(str);
+	var sum_stone = 0;
+	for (var i of maze_info) {
+		for (var j of i) {
+			sum_stone+=j;
+		}
+	}
+
+	str = str + "\n石头数:" + sum_stone;
+	
+	obj = $("#p_info").text(str);
 	obj.html(obj.html().replace(/\n/g,'<br/>'));
+
+	var url = window.location.protocol + "//" + window.location.host + window.location.pathname;
+
+	url = url + "?" + MazeToB64(maze_info);
+	$("#t_code").text(url);
+	$("#t_code").attr("href",url);
 }
 function getxy(id) {
 	var arr = id.slice(1).split('_');
@@ -150,7 +247,15 @@ function getline(lxd, xd, lyd, yd) {
 $(function() {
 	//read maze from localStorage
 	var storage_maze = localStorage.getItem("maze");
-	storage_maze = storage_maze instanceof String ? storage_maze.split(',') : null;
+	storage_maze = storage_maze != null ? B64ToBin(storage_maze) : null;
+	//read maze after # if exist
+	var maze_code = window.location.search.substring(1);
+	if (maze_code != null && maze_code != "") {
+		var c = B64ToBin(maze_code);
+		console.log(c);
+		storage_maze = c;
+	}
+	
 	for (var i = 0; i < 37; i++) {
 		$("#maze").append('<tr id="r' + i + '"></tr>');
 		maze_info[i] = new Array(37);
@@ -158,13 +263,16 @@ $(function() {
 			$("#maze tr#r" + i).append('<td id="c' + i + '_' + j + '"></td>');
 			maze_info[i][j] = 0;
 			if (storage_maze instanceof Array) {
-				maze_info[i][j] = parseInt(storage_maze[i*37+j]) == 1 ? 1 : 0;
+				var a = storage_maze[i*37+j];
+				if (a == null) a = 0;
+				maze_info[i][j] = a;
 			}
 			refresh_cell(i, j);
 		}
 	}
 	on_maze_changed();
-	
+	//localStorage.setItem("maze", maze_info);
+
 	$("#maze tr td").css('border', '1px solid gray');
 	
 	// disable rightclick menu
@@ -189,7 +297,6 @@ $(function() {
 	});
 	$("#maze").on("mousedown","td",function(e){
 		console.log($(this)[0].id);
-		console.log(e.which);
 		e.preventDefault();
 		last_cell = start_cell = $(this)[0];
 		var r = getxy($(this)[0].id);
@@ -197,7 +304,6 @@ $(function() {
 		$(this).css('background-color', '#BBBBBB');
 	});
 	$("#maze").on("mouseup","",function(e){
-		console.log(e.which);
 		if (start_cell != null && last_cell != null) {
 			var xy1 = getxy(start_cell.id);
 			var xy2 = getxy(last_cell.id);
@@ -213,13 +319,49 @@ $(function() {
 				refresh_cell(p[0], p[1]);
 			}
 			on_maze_changed();
+			localStorage.setItem("maze", MazeToB64(maze_info));
 		}
-		
-		localStorage.setItem("maze", maze_info);
 		
 		start_cell = null
 		$("#maze tr td").css('border', '1px solid gray');
 	});
+	$("#btnclear").click(function(){
+		for (var i = 0; i < 37; i++) {
+			for (var j = 0; j < 37; j++) {
+				maze_info[i][j]=0;
+			}
+		}
+		refresh_all()
+		on_maze_changed()
+	})
+	$(":button[id^='btnload']").click(function(){
+		btnid = $(this)[0].id.substring(7);
+		console.log("load", btnid)
+
+		var storage_maze = localStorage.getItem("maze" + btnid);
+		if (storage_maze == null) {
+			toastr.error("No saved data")
+			return;
+		}
+		storage_maze = B64ToBin(storage_maze);
+		for(var i = 0; i < 37; i++) {
+			for(var j = 0; j < 37; j++) {
+				var a = storage_maze[i*37+j];
+				if(a == null) a = 0;
+				maze_info[i][j] = a;
+			}
+		}
+		refresh_all()
+		on_maze_changed()
+		toastr.success("Load success")
+	})
+	$(":button[id^='btnsave']").click(function(){
+		btnid = $(this)[0].id.substring(7);
+		console.log("save", btnid)
+
+		localStorage.setItem("maze" + btnid, MazeToB64(maze_info));
+		toastr.success("Save success")
+	})
 });
 </script>
 </html>
